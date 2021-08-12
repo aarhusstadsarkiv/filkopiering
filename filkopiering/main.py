@@ -21,6 +21,7 @@ if sys.stdout.encoding != "UTF-8":
 if sys.stderr.encoding != "UTF-8":
     sys.stderr = utf8_stderr  # type: ignore
 
+
 @Gooey(
     program_name=f"Filkopiering, version {__version__}",
     program_description="Værktøj til at kopiere filer fra csv-registreringer",
@@ -37,23 +38,29 @@ async def main() -> None:
     cli.add_argument(
         "source",
         metavar="Kilde",
-        help="Sti til den overordnede mappe, hvorunder alle filerne findes (undermapper er tilladt)",
+        help="Sti til den overordnede mappe, hvorunder alle filerne findes \
+            (undermapper er tilladt)",
         widget="DirChooser",
         type=Path,
         gooey_options={
-            "default_path": str(Path(r"M:\Borgerservice-Biblioteker\Stadsarkivet\_DIGITALT ARKIV")),
-            "full_width": True
+            "default_path": str(
+                Path(
+                    r"M:\Borgerservice-Biblioteker\Stadsarkivet\_DIGITALT ARKIV"
+                )
+            ),
+            "full_width": True,
         },
     )
     cli.add_argument(
         "destination",
         metavar="Destination",
-        help="Sti til mappen, hvortil filerne skal kopieres (mappen behøver ikke eksistere i forvejen)",
+        help="Sti til mappen, hvortil filerne skal kopieres (mappen behøver \
+            ikke eksistere i forvejen)",
         widget="DirChooser",
         type=Path,
         gooey_options={
             "default_path": str(Path(Path.home(), "Downloads")),
-            "full_width": True
+            "full_width": True,
         },
     )
     cli.add_argument(
@@ -62,17 +69,14 @@ async def main() -> None:
         help="Sti til csv-filen med fil-referencerne",
         widget="FileChooser",
         type=Path,
-        gooey_options={
-            "full_width": True
-        },
+        gooey_options={"full_width": True},
     )
     cli.add_argument(
         "column",
         metavar="Kolonnenavn",
-        help="Navnet på den kolonne i csv-filen, der indeholder fil-referencerne",
-        gooey_options={
-            "full_width": True
-        },
+        help="Navnet på den kolonne i csv-filen, der indeholder \
+            fil-referencerne",
+        gooey_options={"full_width": True},
     )
     cli.add_argument(
         "--delete",
@@ -88,7 +92,10 @@ async def main() -> None:
         sys.exit(f"The sourcefolder does not exist: {args.source}")
 
     if not Path(args.destination).is_dir():
-        print("The destinationfolder does not exist. Trying to create it...", flush=True)
+        print(
+            "The destinationfolder does not exist. Trying to create it...",
+            flush=True,
+        )
         try:
             Path(args.destination).mkdir(parents=True)
             print("Destinationfolder created", flush=True)
@@ -103,14 +110,14 @@ async def main() -> None:
 
     with open(Path(args.file)) as ifile:
         reader = csv.DictReader(ifile)
-        if column not in reader.fieldnames:
+        if reader.fieldnames and column not in reader.fieldnames:
             sys.exit(f"The selected csv-file has no column named '{column}'")
 
         filenames = [d.get(column) for d in reader]
 
     print("All inputs valid. Copying files...", flush=True)
 
-    for f in Path(args.source).glob('**/*'):
+    for f in Path(args.source).glob("**/*"):
         if f.is_file() and f.name in filenames:
             try:
                 shutil.copy(f, Path(args.destination, f.name))
