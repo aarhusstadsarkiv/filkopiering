@@ -108,12 +108,13 @@ async def main() -> None:
     filenames: List = []
     column: str = args.column
 
-    with open(Path(args.file)) as ifile:
+    with open(Path(args.file), encoding='utf8') as ifile:
         reader = csv.DictReader(ifile)
         if reader.fieldnames and column not in reader.fieldnames:
             sys.exit(f"The selected csv-file has no column named '{column}'")
 
         filenames = [d.get(column) for d in reader]
+        copied_files = []
 
     print("All inputs valid. Copying files...", flush=True)
 
@@ -122,12 +123,18 @@ async def main() -> None:
             try:
                 shutil.copy(f, Path(args.destination, f.name))
                 print(f"{f.name} copied to destination", flush=True)
+                copied_files.append(f)
             except Exception as e:
                 sys.exit(f"Unable to copy file to destination: {e}")
             if args.delete:
                 f.unlink()
                 print((f"{f.name} deleted from original path"), flush=True)
 
+    not_copied_files = list(set(copied_files).difference(filenames))
+    
+    print("The following files could not be found and thus not copied: ", flush=True)
+    for file in not_copied_files:
+        print(file)
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
