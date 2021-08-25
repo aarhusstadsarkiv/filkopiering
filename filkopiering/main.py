@@ -187,7 +187,9 @@ def walk_source_dir(args, filenames) -> Tuple[Dict[Path, Path], Dict[str, List[P
                     files_to_copy[f] = Path(args.destination, f.name)
                     if f.name in detected_file_names:
                         duplicated_file_names.append(f.name)
-                    detected_file_names[f.name] = detected_file_names[f.name].append(f)
+                        detected_file_names[f.name] = detected_file_names[f.name].append(f)
+                    else:
+                        detected_file_names[f.name] = [f]
             if args.delete:
                 try:
                     f.unlink()
