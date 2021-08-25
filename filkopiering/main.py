@@ -37,7 +37,7 @@ async def main() -> None:
     # General parser
     cli = GooeyParser(description="Filkopiering")
     args = setup_parser(cli)
-    
+
     # Tests
     if not Path(args.source).is_dir():
         sys.exit(f"The sourcefolder does not exist: {args.source}")
@@ -72,7 +72,7 @@ async def main() -> None:
     copy_files(args.destination, files_to_copy)
 
     if duplicate_file_names:
-            print_duplicate_file_names(duplicate_file_names)
+        print_duplicate_file_names(duplicate_file_names)
 
     not_copied_files = list(set(detected_file_names).difference(filenames))
     print("The following files could not be found and thus not copied: ", flush=True)
@@ -135,36 +135,68 @@ def setup_parser(cli) -> any:
 
 
 def copy_files(destination, files_to_copy) -> None:
+    '''
+        Description:
+        -------------
+        Copies the files in files_to_copy to their destination.
+
+        Input:
+        ---------
+        destination: Path. The root destination path.
+        files_to_copy: Dict[Path, Path]. A dictionary containing the source and dest paths of files.
+
+    '''
     print("Copying...", flush=True)
     for key in files_to_copy:
-        source_path = files_to_copy[key]
-        shutil.copy(source_path, Path(destination, source_path.name))
+        try:
+            source_path = files_to_copy[key]
+            shutil.copy(source_path, Path(destination, source_path.name))
+        except Exception as e:
+            sys.exit(f"Unable to copy file to destination: {e}")
 
-def walk_source_dir(args, filenames) -> Tuple[Dict[str, str], List[str], List[str]]:
+def walk_source_dir(args, filenames) -> Tuple[Dict[Path, Path], List[str], List[str]]:
+    '''
+        Description:
+        -------------
+        Walks the source dir in order to find all the files to copy or delete.
+        In the delete case, the function also deletes the files.
+
+        Input:
+        ---------
+        args: any.
+        filenames: List[str]. A list of names of files to copy.
+
+        Returns:
+        --------
+        files_to_copy: [Dict[Path, Path]. A dictionary of files to copy, 
+        where the key is the file location path and the value is the path to copy it to.
+        detected_file_names, duplicate_file_names
+
+    '''
     files_to_copy: Dict[Path, Path] = {}
     detected_file_names: List[str] = []
     duplicate_file_names: List[str] = []
 
     for f in Path(args.source).glob("**/*"):
-            if f.is_file() and f.name in filenames and f.name not in detected_file_names: 
-                try:
+            if f.is_file() and f.name in filenames:
+                if f.name not in detected_file_names: 
                     files_to_copy[f] = Path(args.destination, f.name)
-                    # print(f"{f.name} copied to destination", flush=True)
-        #           copied_files.append(f)
                     detected_file_names.append(f.name)
-                except Exception as e:
-                    sys.exit(f"Unable to copy file to destination: {e}")
-            else:
-                duplicate_file_names.append(f.name)
-                if args.delete:
+                else:
+                    duplicate_file_names.append(f.name)
+            if args.delete:
+                try:
                     f.unlink()
                     print((f"{f.name} deleted from original path"), flush=True)
+                except Exception as e:
+                    sys.exit(f"Unable to delete file: {e}")
     return files_to_copy, detected_file_names, duplicate_file_names
 
 def print_duplicate_file_names(duplicate_file_names: List[str]):
     print("Files with the following file names where found more than ones: ")
     for name in duplicate_file_names:
         print(name)
+
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main())
