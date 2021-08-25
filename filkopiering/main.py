@@ -6,6 +6,8 @@ import shutil
 
 from pathlib import Path
 from typing import List
+from typing import Dict
+from typing import Tuple
 
 from gooey import Gooey, GooeyParser
 
@@ -34,7 +36,51 @@ async def main() -> None:
 
     # General parser
     cli = GooeyParser(description="Filkopiering")
+    args = setup_parser(cli)
 
+    # Tests
+    if not Path(args.source).is_dir():
+        sys.exit(f"The sourcefolder does not exist: {args.source}")
+
+    if not Path(args.destination).is_dir():
+        print(
+            "The destinationfolder does not exist. Trying to create it...",
+            flush=True,
+        )
+        try:
+            Path(args.destination).mkdir(parents=True)
+            print("Destinationfolder created", flush=True)
+        except Exception as e:
+            sys.exit(f"Unable to create the destinationfolder: {e}")
+
+    if not Path(args.file).is_file():
+        sys.exit(f"The csv-file does not exist: {args.file}")
+
+    filenames: List = []
+    column: str = args.column
+
+    with open(Path(args.file), encoding='utf8') as ifile:
+        reader = csv.DictReader(ifile)
+        if reader.fieldnames and column not in reader.fieldnames:
+            sys.exit(f"The selected csv-file has no column named '{column}'")
+
+        filenames = [d.get(column) for d in reader]
+        
+    print("All inputs valid. Copying files...", flush=True)
+    
+    files_to_copy, detected_file_names, duplicated_file_names = walk_source_dir(args, filenames)    
+    copy_files(args.destination, files_to_copy)
+
+    if duplicated_file_names:
+        print_duplicate_file_names(duplicated_file_names, detected_file_names)
+
+    not_copied_files = list(set(detected_file_names.keys()).difference(filenames))
+    if not_copied_files:
+        print("The following files could not be found and thus not copied: ", flush=True)
+        for file in not_copied_files:
+            print(file)
+            
+def setup_parser(cli) -> any:
     cli.add_argument(
         "source",
         metavar="Kilde",
@@ -86,48 +132,76 @@ async def main() -> None:
     )
 
     args = cli.parse_args()
+    return args
 
-    # Tests
-    if not Path(args.source).is_dir():
-        sys.exit(f"The sourcefolder does not exist: {args.source}")
 
-    if not Path(args.destination).is_dir():
-        print(
-            "The destinationfolder does not exist. Trying to create it...",
-            flush=True,
-        )
+def copy_files(destination, files_to_copy) -> None:
+    '''
+        Description:
+        -------------
+        Copies the files in files_to_copy to their destination.
+
+        Input:
+        ---------
+        destination: Path. The root destination path.
+        files_to_copy: Dict[Path, Path]. A dictionary containing the source and dest paths of files.
+
+    '''
+    for key in files_to_copy:
         try:
-            Path(args.destination).mkdir(parents=True)
-            print("Destinationfolder created", flush=True)
+            source_path = files_to_copy[key]
+            shutil.copy(source_path, Path(destination, source_path.name))
         except Exception as e:
-            sys.exit(f"Unable to create the destinationfolder: {e}")
+            sys.exit(f"Unable to copy file to destination: {e}")
+    print("Finished copying.", flush=True)
 
-    if not Path(args.file).is_file():
-        sys.exit(f"The csv-file does not exist: {args.file}")
+def walk_source_dir(args, filenames) -> Tuple[Dict[Path, Path], Dict[str, List[Path]], List[str]]:
+    '''
+        Description:
+        -------------
+        Walks the source dir in order to find all the files to copy or delete.
+        In the delete case, the function also deletes the files.
 
-    filenames: List = []
-    column: str = args.column
+        Input:
+        ---------
+        args: any.
+        filenames: List[str]. A list of names of files to copy.
 
-    with open(Path(args.file)) as ifile:
-        reader = csv.DictReader(ifile)
-        if reader.fieldnames and column not in reader.fieldnames:
-            sys.exit(f"The selected csv-file has no column named '{column}'")
-
-        filenames = [d.get(column) for d in reader]
-
-    print("All inputs valid. Copying files...", flush=True)
+        Returns:
+        --------
+        * files_to_copy: [Dict[Path, Path]. A dictionary of files to copy, 
+        where the key is the file location path and the value is the path to copy it to.
+        
+        * detected_file_names: Dict[str, List[Path]]. A dictionary, where key is a file name
+        and value is a list of Paths representing a file with the given file name in key.
+        
+        * duplicated_file_names: List[str]. A list of the duplicated file names.
+    '''
+    files_to_copy: Dict[Path, Path] = {}
+    detected_file_names: Dict[str, List[Path]] = {}
+    duplicated_file_names: List[str] = []
 
     for f in Path(args.source).glob("**/*"):
-        if f.is_file() and f.name in filenames:
-            try:
-                shutil.copy(f, Path(args.destination, f.name))
-                print(f"{f.name} copied to destination", flush=True)
-            except Exception as e:
-                sys.exit(f"Unable to copy file to destination: {e}")
+            if f.is_file() and f.name in filenames:
+                if f.name not in detected_file_names: 
+                    files_to_copy[f] = Path(args.destination, f.name)
+                    if f.name in detected_file_names:
+                        duplicated_file_names.append(f.name)
+                    detected_file_names[f.name] = detected_file_names[f.name].append(f)
             if args.delete:
-                f.unlink()
-                print((f"{f.name} deleted from original path"), flush=True)
+                try:
+                    f.unlink()
+                    print((f"{f.name} deleted from original path"), flush=True)
+                except Exception as e:
+                    sys.exit(f"Unable to delete file: {e}")
+    return files_to_copy, detected_file_names, duplicated_file_names
 
+
+def print_duplicate_file_names(duplicated_file_names: List[str], detected_file_names: Dict[str, List[Path]]):
+    print("Files with the following file names where found more than ones: ")
+    for name in duplicated_file_names:
+            print(name + "with paths: ")
+            print(detected_file_names[name])
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
