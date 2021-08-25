@@ -68,17 +68,18 @@ async def main() -> None:
         
     print("All inputs valid. Copying files...", flush=True)
     
-    files_to_copy, detected_file_names, duplicate_file_names = walk_source_dir(args, filenames)    
+    files_to_copy, detected_file_names, duplicated_file_names = walk_source_dir(args, filenames)    
     copy_files(args.destination, files_to_copy)
 
-    if duplicate_file_names:
-        print_duplicate_file_names(duplicate_file_names)
+    if duplicated_file_names:
+        print_duplicate_file_names(duplicated_file_names, detected_file_names)
 
-    not_copied_files = list(set(detected_file_names).difference(filenames))
-    print("The following files could not be found and thus not copied: ", flush=True)
-    for file in not_copied_files:
-        print(file)
-
+    not_copied_files = list(set(detected_file_names.keys()).difference(filenames))
+    if not_copied_files:
+        print("The following files could not be found and thus not copied: ", flush=True)
+        for file in not_copied_files:
+            print(file)
+            
 def setup_parser(cli) -> any:
     cli.add_argument(
         "source",
@@ -146,15 +147,15 @@ def copy_files(destination, files_to_copy) -> None:
         files_to_copy: Dict[Path, Path]. A dictionary containing the source and dest paths of files.
 
     '''
-    print("Copying...", flush=True)
     for key in files_to_copy:
         try:
             source_path = files_to_copy[key]
             shutil.copy(source_path, Path(destination, source_path.name))
         except Exception as e:
             sys.exit(f"Unable to copy file to destination: {e}")
+    print("Finished copying.", flush=True)
 
-def walk_source_dir(args, filenames) -> Tuple[Dict[Path, Path], List[str], List[str]]:
+def walk_source_dir(args, filenames) -> Tuple[Dict[Path, Path], Dict[str, List[Path]], List[str]]:
     '''
         Description:
         -------------
@@ -168,34 +169,39 @@ def walk_source_dir(args, filenames) -> Tuple[Dict[Path, Path], List[str], List[
 
         Returns:
         --------
-        files_to_copy: [Dict[Path, Path]. A dictionary of files to copy, 
+        * files_to_copy: [Dict[Path, Path]. A dictionary of files to copy, 
         where the key is the file location path and the value is the path to copy it to.
-        detected_file_names, duplicate_file_names
-
+        
+        * detected_file_names: Dict[str, List[Path]]. A dictionary, where key is a file name
+        and value is a list of Paths representing a file with the given file name in key.
+        
+        * duplicated_file_names: List[str]. A list of the duplicated file names.
     '''
     files_to_copy: Dict[Path, Path] = {}
-    detected_file_names: List[str] = []
-    duplicate_file_names: List[str] = []
+    detected_file_names: Dict[str, List[Path]] = {}
+    duplicated_file_names: List[str] = []
 
     for f in Path(args.source).glob("**/*"):
             if f.is_file() and f.name in filenames:
                 if f.name not in detected_file_names: 
                     files_to_copy[f] = Path(args.destination, f.name)
-                    detected_file_names.append(f.name)
-                else:
-                    duplicate_file_names.append(f.name)
+                    if f.name in detected_file_names:
+                        duplicated_file_names.append(f.name)
+                    detected_file_names[f.name] = detected_file_names[f.name].append(f)
             if args.delete:
                 try:
                     f.unlink()
                     print((f"{f.name} deleted from original path"), flush=True)
                 except Exception as e:
                     sys.exit(f"Unable to delete file: {e}")
-    return files_to_copy, detected_file_names, duplicate_file_names
+    return files_to_copy, detected_file_names, duplicated_file_names
 
-def print_duplicate_file_names(duplicate_file_names: List[str]):
+
+def print_duplicate_file_names(duplicated_file_names: List[str], detected_file_names: Dict[str, List[Path]]):
     print("Files with the following file names where found more than ones: ")
-    for name in duplicate_file_names:
-        print(name)
+    for name in duplicated_file_names:
+            print(name + "with paths: ")
+            print(detected_file_names[name])
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
