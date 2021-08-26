@@ -1,4 +1,3 @@
-from _typeshed import StrPath
 import codecs
 import sys
 import csv
@@ -146,7 +145,7 @@ def setup_parser(cli) -> any:
 
 
 def copy_files(
-    destination: StrPath,
+    destination: any,
     detected_file_names: Dict[str, List[Path]],
     duplicated_file_names: List[str],
 ) -> None:
