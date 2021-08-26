@@ -1,3 +1,4 @@
+from _typeshed import StrPath
 import codecs
 import sys
 import csv
@@ -136,7 +137,7 @@ def setup_parser(cli) -> any:
     return args
 
 
-def copy_files(destination, detected_file_names, duplicated_file_names) -> None:
+def copy_files(destination: StrPath, detected_file_names: Dict[str, List[Path]], duplicated_file_names: List[str]) -> None:
     '''
         Description:
         -------------
@@ -145,18 +146,19 @@ def copy_files(destination, detected_file_names, duplicated_file_names) -> None:
         Input:
         ---------
         destination: Path. The root destination path.
-        files_to_copy: Dict[Path, Path]. A dictionary containing the source and dest paths of files.
-
+        detected_file_names: Dict[str, List[Path]]. A dictionary, where key is a file name
+        and value is a list of Paths representing a file with the given file name in key.
+        duplicated_file_names: List[str]. A list of duplicated file names.
     '''
     for filename in detected_file_names:
         if filename not in duplicated_file_names:
             try:
-                shutil.copy(filename, Path(destination, filename))
+                shutil.copy(detected_file_names[filename][0], Path(destination, filename))
             except Exception as e:
                 sys.exit(f"Unable to copy file to destination: {e}")
     print("Finished copying.", flush=True)
 
-def walk_source_dir(args, filenames) -> Tuple[Dict[Path, Path], Dict[str, List[Path]], List[str]]:
+def walk_source_dir(args, filenames) -> Tuple[Dict[str, List[Path]], List[str]]:
     '''
         Description:
         -------------
@@ -196,7 +198,7 @@ def walk_source_dir(args, filenames) -> Tuple[Dict[Path, Path], Dict[str, List[P
 
 
 def print_duplicate_file_names(duplicated_file_names: List[str], detected_file_names: Dict[str, List[Path]]):
-    print("Files with the following file names where found more than ones: ", flush=True)
+    print("Files with the following file names where found more than ones and thus not copied: ", flush=True)
     for name in duplicated_file_names:
             print(name + " with paths: ", flush=True)
             for path in detected_file_names[name]:
