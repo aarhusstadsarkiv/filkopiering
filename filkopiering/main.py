@@ -200,7 +200,7 @@ def walk_source_dir(args, filenames) -> Tuple[Dict[str, List[Path]], List[str]]:
 def print_duplicate_file_names(duplicated_file_names: List[str], detected_file_names: Dict[str, List[Path]]):
     print("Files with the following file names where found more than ones and thus not copied: ", flush=True)
     for name in duplicated_file_names:
-            print(name + " with paths: ", flush=True)
+            print(f"{name} with paths: ", flush=True)
             for path in detected_file_names[name]:
                 print(path, flush=True)
 
