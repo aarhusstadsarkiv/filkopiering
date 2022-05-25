@@ -14,7 +14,7 @@ from gooey import Gooey, GooeyParser
 # -----------------------------------------------------------------------------
 # Setup
 # -----------------------------------------------------------------------------
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 utf8_stdout = codecs.getwriter("utf-8")(sys.stdout.buffer, "strict")
 utf8_stderr = codecs.getwriter("utf-8")(sys.stderr.buffer, "strict")
@@ -68,9 +68,11 @@ async def main() -> None:
 
     print("All inputs valid. Copying files...", flush=True)
 
-    detected_file_names, duplicated_file_names = walk_source_dir(
-        args, filenames
-    )
+    (
+        detected_file_names,
+        duplicated_file_names,
+        missing_file_names,
+    ) = walk_source_dir(args, filenames)
     copy_files(args.destination, detected_file_names, duplicated_file_names)
 
     if duplicated_file_names:
@@ -87,6 +89,11 @@ async def main() -> None:
         )
         for file in not_copied_files:
             print(file)
+
+    if missing_file_names:
+        print("The following files where not found:", flush=True)
+        for f in missing_file_names:
+            print(f, flush=True)
 
 
 def setup_parser(cli) -> any:
@@ -176,7 +183,7 @@ def copy_files(
 
 def walk_source_dir(
     args, filenames
-) -> Tuple[Dict[str, List[Path]], List[str]]:
+) -> Tuple[Dict[str, List[Path]], List[str], List[str]]:
     """
     Description:
     -------------
@@ -199,9 +206,11 @@ def walk_source_dir(
     """
     detected_file_names: Dict[str, List[Path]] = {}
     duplicated_file_names: List[str] = []
+    files_found: List[str]
 
     for f in Path(args.source).glob("**/*"):
         if f.is_file() and f.name in filenames:
+            files_found.append(f.name)
             if f.name in detected_file_names:
                 duplicated_file_names.append(f.name)
                 detected_file_names[f.name].append(f)
@@ -213,7 +222,9 @@ def walk_source_dir(
                 print((f"{f.name} deleted from original path"), flush=True)
             except Exception as e:
                 sys.exit(f"Unable to delete file: {e}")
-    return detected_file_names, duplicated_file_names
+
+    missing_files: List = [f for f in filenames if f not in files_found]
+    return detected_file_names, duplicated_file_names, missing_files
 
 
 def print_duplicate_file_names(
