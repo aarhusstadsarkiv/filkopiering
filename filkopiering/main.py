@@ -69,7 +69,6 @@ async def main() -> None:
     (
         detected_file_names,
         duplicated_file_names,
-        missing_file_names,
     ) = walk_source_dir(args, filenames)
     copy_files(args.destination, detected_file_names, duplicated_file_names)
 
@@ -87,19 +86,20 @@ async def main() -> None:
         )
         for file in not_copied_files:
             print(file)
+        print("\n", flush=True)
 
-    if missing_file_names:
-        print("The following files where not found:", flush=True)
-        for f in missing_file_names:
-            print(f, flush=True)
+
+    # if missing_file_names:
+    #     print("The following files where not found:", flush=True)
+    #     for f in missing_file_names:
+    #         print(f, flush=True)
 
 
 def setup_parser(cli) -> Any:
     cli.add_argument(
         "source",
         metavar="Kilde",
-        help="Sti til den overordnede mappe, hvorunder alle filerne findes \
-            (undermapper er tilladt)",
+        help="Sti til den overordnede mappe, hvorunder alle filerne findes (undermapper er tilladt)",
         widget="DirChooser",
         type=Path,
         gooey_options={
@@ -114,8 +114,7 @@ def setup_parser(cli) -> Any:
     cli.add_argument(
         "destination",
         metavar="Destination",
-        help="Sti til mappen, hvortil filerne skal kopieres (mappen behøver \
-            ikke eksistere i forvejen)",
+        help="Sti til mappen, hvortil filerne skal kopieres (mappen behøver ikke eksistere i forvejen)",
         widget="DirChooser",
         type=Path,
         gooey_options={
@@ -134,8 +133,7 @@ def setup_parser(cli) -> Any:
     cli.add_argument(
         "column",
         metavar="Kolonnenavn",
-        help="Navnet på den kolonne i csv-filen, der indeholder \
-            fil-referencerne",
+        help="Navnet på den kolonne i csv-filen, der indeholder fil-referencerne",
         gooey_options={"full_width": True},
     )
     cli.add_argument(
@@ -176,12 +174,12 @@ def copy_files(
                 )
             except Exception as e:
                 sys.exit(f"Unable to copy file to destination: {e}")
-    print("Finished copying.", flush=True)
+    print("Finished copying.\n", flush=True)
 
 
 def walk_source_dir(
     args, filenames
-) -> Tuple[Dict[str, List[Path]], List[str], List[str]]:
+) -> Tuple[Dict[str, List[Path]], List[str]]:
     """
     Description:
     -------------
@@ -204,11 +202,11 @@ def walk_source_dir(
     """
     detected_file_names: Dict[str, List[Path]] = {}
     duplicated_file_names: List[str] = []
-    files_found: List[str] = []
+    # files_found: List[str] = []
 
     for f in Path(args.source).glob("**/*"):
         if f.is_file() and f.name in filenames:
-            files_found.append(f.name)
+            # files_found.append(f.name)
             if f.name in detected_file_names:
                 duplicated_file_names.append(f.name)
                 detected_file_names[f.name].append(f)
@@ -221,8 +219,8 @@ def walk_source_dir(
             except Exception as e:
                 sys.exit(f"Unable to delete file: {e}")
 
-    missing_files: List = [f for f in filenames if f not in files_found]
-    return detected_file_names, duplicated_file_names, missing_files
+    # missing_files: List = [f for f in filenames if f not in files_found]
+    return detected_file_names, duplicated_file_names
 
 
 def print_duplicate_file_names(
@@ -230,14 +228,15 @@ def print_duplicate_file_names(
     detected_file_names: Dict[str, List[Path]],
 ):
     print(
-        "Files with the following file names \n"
-        "where found more than ones and thus not copied: ",
+        f"Files with the following file names "
+        f"where found more than ones and thus not copied: ",
         flush=True,
     )
     for name in duplicated_file_names:
         print(f"{name} with paths: ", flush=True)
         for path in detected_file_names[name]:
             print(path, flush=True)
+    print("\n", flush=True)
 
 
 if __name__ == "__main__":
