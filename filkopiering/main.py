@@ -5,9 +5,7 @@ import asyncio
 import shutil
 
 from pathlib import Path
-from typing import List
-from typing import Dict
-from typing import Tuple
+from typing import List, Dict, Tuple, Any
 
 from gooey import Gooey, GooeyParser
 
@@ -96,7 +94,7 @@ async def main() -> None:
             print(f, flush=True)
 
 
-def setup_parser(cli) -> any:
+def setup_parser(cli) -> Any:
     cli.add_argument(
         "source",
         metavar="Kilde",
@@ -152,7 +150,7 @@ def setup_parser(cli) -> any:
 
 
 def copy_files(
-    destination: any,
+    destination: Any,
     detected_file_names: Dict[str, List[Path]],
     duplicated_file_names: List[str],
 ) -> None:
@@ -206,7 +204,7 @@ def walk_source_dir(
     """
     detected_file_names: Dict[str, List[Path]] = {}
     duplicated_file_names: List[str] = []
-    files_found: List[str]
+    files_found: List[str] = []
 
     for f in Path(args.source).glob("**/*"):
         if f.is_file() and f.name in filenames:
