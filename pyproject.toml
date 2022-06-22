@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "Filkopiering"
-version = "0.1.0"
+version = "0.2.0"
 description = ""
 authors = ["Claus Juhl Knudsen <cjk@aarhus.dk>"]
 maintainers = ["Aarhus Stadsarkiv <stadsarkiv@aarhus.dk>"]
@@ -14,8 +14,6 @@ gooey = "^1.0.8"
 pyinstaller = "^4.5.1"
 
 [tool.poetry.dev-dependencies]
-pytest = "^6.2"
-pytest-cov = "^2.11"
 black = "^20.8b1"
 flake8 = "^3.9.1"
 mypy = "^0.812"
