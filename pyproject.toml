@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "Filkopiering"
-version = "0.2.0"
+version = "0.2.1"
 description = ""
 authors = ["Claus Juhl Knudsen <cjk@aarhus.dk>"]
 maintainers = ["Aarhus Stadsarkiv <stadsarkiv@aarhus.dk>"]
