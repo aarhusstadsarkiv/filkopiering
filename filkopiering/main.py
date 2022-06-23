@@ -12,7 +12,7 @@ from gooey import Gooey, GooeyParser
 # -----------------------------------------------------------------------------
 # Setup
 # -----------------------------------------------------------------------------
-__version__ = "0.1.1"
+__version__ = "0.2.1"
 
 utf8_stdout = codecs.getwriter("utf-8")(sys.stdout.buffer, "strict")
 utf8_stderr = codecs.getwriter("utf-8")(sys.stderr.buffer, "strict")
@@ -58,7 +58,7 @@ async def main() -> None:
             sys.exit(f"The selected csv-file has no column named '{column}'")
         filenames = [d.get(column) for d in reader]
 
-    print("All inputs valid. Locating files...", flush=True)
+    print("\nAll inputs valid.", flush=True)
 
     # process valid input
     # (
@@ -77,19 +77,22 @@ async def main() -> None:
     files_found, filenames_not_found = find_files(args.source, filenames)
     if filenames_not_found:
         print(
-            "The following files could not be found and thus not copied:",
+            f"The following {len(filenames_not_found)} file(s) could not be "
+            f"found and thus not copied:",
             flush=True,
         )
         for file in filenames_not_found:
             print(f"  {file}", flush=True)
-        print("\n", flush=True)
 
     files_copied = copy_files(files_found, args.destination)
 
-    if args.delete:
+    if args.delete and files_copied:
         files_not_deleted = delete_files(files_copied)
         if files_not_deleted:
-            print("Unable to delete the following files:", flush=True)
+            print(
+                f"Unable to delete the following {len(files_not_deleted)} file(s):",
+                flush=True,
+            )
             for f in files_not_deleted:
                 print(f"  {f}", flush=True)
 
@@ -161,8 +164,10 @@ def find_files(
         if f.is_file() and f.name in filenames:
             if f.name not in filenames_found:
                 filenames_found[f.name] = [f]
+            else:
+                filenames_found[f.name].append(f)
 
-    print("Finished locating files.", flush=True)
+    print(f"Finished locating {len(filenames_found)} file(s).", flush=True)
     return filenames_found, [x for x in filenames if x not in filenames_found]
 
 
@@ -170,7 +175,10 @@ def copy_files(files_to_copy: Dict[str, List[Path]], dest: Path) -> List[Path]:
     files_copied: List[Path] = []
     for k, v in files_to_copy.items():
         if len(v) > 1:
-            print("Duplicate file found. It will not be copied:", flush=True)
+            print(
+                "Duplicate filename found. These files will not be copied:",
+                flush=True,
+            )
             for el in v:
                 print(f"  {el}")
             continue
@@ -181,7 +189,7 @@ def copy_files(files_to_copy: Dict[str, List[Path]], dest: Path) -> List[Path]:
         else:
             files_copied.append(v[0])
 
-    print("Finished copying files.", flush=True)
+    print(f"Finished copying {len(files_copied)} file(s).", flush=True)
     return files_copied
 
 
@@ -195,7 +203,10 @@ def delete_files(files: List[Path]) -> List[Path]:
             print(f"Unable to delete file. {f}: {e}")
             files_not_deleted.append(f)
 
-    print("Finished deleting files.", flush=True)
+    print(
+        f"Finished deleting {len(files) - len(files_not_deleted)} file(s).",
+        flush=True,
+    )
     return files_not_deleted
 
 
